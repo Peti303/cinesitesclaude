@@ -83,7 +83,7 @@
         .scroll-container {
             position: relative;
             z-index: 2;
-            height: 500vh;
+            height: 320vh;
             pointer-events: none;
         }
 
@@ -472,7 +472,7 @@
                 background: linear-gradient(180deg, var(--color-bg) 0%, #f5f7ff 60%, #ffffff 100%);
             }
             .scroll-container {
-                height: 420vh;
+                height: 280vh;
             }
             .hero-section {
                 align-items: flex-end;
@@ -597,7 +597,7 @@
 
     <main class="main-content" id="main-content">
         <div class="content-wrapper">
-            <div class="content-badge">✨ Üdvözöl a jövő</div>
+            <div class="content-badge">✨ Üdvözöllek a jövőben</div>
             <h1 class="main-headline">Élménytervezés<br>határok nélkül</h1>
             <p class="main-subtitle">
                 Olyan digitális élményeket alkotunk, amelyek túlmutatnak a megszokotton.
@@ -669,20 +669,20 @@
             // a kamera és a renderer beállításai átméretezéskor is frissülnek.
             let isMobile = window.innerWidth <= 768;
             let baseCameraZ = isMobile ? 6.4 : 5;
-            let scrollDepth = isMobile ? 11 : 15;
+            let scrollDepth = isMobile ? 6 : 8.5;
 
             // ============================================
             // SCROLL PHASES (0..1)
             // ============================================
             const phases = {
-                sphereInteractEnd: 0.15,
-                morphStart: 0.25,
-                morphEnd: 0.9,
+                sphereInteractEnd: 0.27,
+                morphStart: 0.45,
+                morphEnd: 0.88,
                 // A téma a szétszóródás elején vált sötétre (a morph ezen hányadánál)
                 darkMorphEnd: 0.45,
                 // A tartalom a görgetés legvégén jelenik meg, így utána már nincs mit tovább görgetni
-                contentVisible: 0.93,
-                backgroundInteractStart: 0.9,
+                contentVisible: 0.9,
+                backgroundInteractStart: 0.88,
                 innerScroll: 0.985
             };
 
@@ -1262,7 +1262,7 @@
             function onResize() {
                 isMobile = window.innerWidth <= 768;
                 baseCameraZ = isMobile ? 6.4 : 5;
-                scrollDepth = isMobile ? 11 : 15;
+                scrollDepth = isMobile ? 6 : 8.5;
 
                 camera.fov = isMobile ? 80 : 75;
                 camera.aspect = window.innerWidth / window.innerHeight;
