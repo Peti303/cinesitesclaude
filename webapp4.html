@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Particle Sphere | Immersive Experience</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Részecskegömb | Magával ragadó élmény</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <style>
         * {
             margin: 0;
@@ -16,17 +16,49 @@
 
         :root {
             --color-bg: #fafafa;
-            --color-bg-light: #ffffff;
             --color-text: #1a1a2e;
             --color-text-muted: #6b7280;
             --color-accent: #6366f1;
             --color-accent-light: #818cf8;
+            --headline-from: #1a1a2e;
+            --headline-to: #4b5563;
+            --badge-bg: rgba(99, 102, 241, 0.1);
+            --badge-border: rgba(99, 102, 241, 0.2);
+            --badge-text: #6366f1;
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --card-border: rgba(0, 0, 0, 0.05);
+            --card-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+            --btn-secondary-border: rgba(0, 0, 0, 0.1);
+            --content-backdrop: none;
             --safe-top: env(safe-area-inset-top, 0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
 
+        /* Sötét téma - akkor kapcsol be, amikor a gömb pontjai szétszóródnak */
+        :root.theme-dark {
+            --color-bg: #070a14;
+            --color-text: #e8ebf7;
+            --color-text-muted: #9aa3bb;
+            --color-accent: #818cf8;
+            --color-accent-light: #a5b4fc;
+            --headline-from: #ffffff;
+            --headline-to: #b8c0e0;
+            --badge-bg: rgba(129, 140, 248, 0.12);
+            --badge-border: rgba(129, 140, 248, 0.3);
+            --badge-text: #a5b4fc;
+            --card-bg: rgba(14, 19, 36, 0.6);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --card-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+            --btn-secondary-border: rgba(255, 255, 255, 0.2);
+            /* Halvány sötétítés a szöveg mögött, hogy a háttérpontok ne zavarják az olvasást */
+            --content-backdrop: radial-gradient(ellipse 75% 65% at 50% 50%, rgba(7, 10, 20, 0.72) 0%, rgba(7, 10, 20, 0.35) 55%, rgba(7, 10, 20, 0) 100%);
+        }
+
         html {
             scroll-behavior: auto;
+            background: var(--color-bg);
+            /* Az oldal alján ne legyen rugalmas "túlhúzás" */
+            overscroll-behavior-y: none;
         }
 
         body {
@@ -34,6 +66,8 @@
             background: var(--color-bg);
             color: var(--color-text);
             overflow-x: hidden;
+            overscroll-behavior-y: none;
+            transition: background-color 0.6s ease;
         }
 
         #webgl-canvas {
@@ -44,16 +78,6 @@
             height: 100%;
             z-index: 1;
             cursor: crosshair;
-        }
-
-        #foreground-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 50;
-            pointer-events: none;
         }
 
         .scroll-container {
@@ -105,6 +129,7 @@
             color: var(--color-text-muted);
             letter-spacing: 2px;
             text-transform: uppercase;
+            white-space: nowrap;
         }
 
         .scroll-indicator {
@@ -139,15 +164,16 @@
             left: 0;
             width: 100%;
             height: 100vh;
+            height: 100dvh;
             z-index: 10;
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
             transition: opacity 0.8s ease, visibility 0.8s ease;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
+            overflow: hidden;
+            padding: calc(24px + var(--safe-top)) 0 calc(24px + var(--safe-bottom));
+            background: var(--content-backdrop);
         }
 
         .main-content.visible {
@@ -156,15 +182,18 @@
             pointer-events: auto;
         }
 
+        /* Csak akkor görgethető belül, ha a tartalom nem fér ki (pl. mobilon).
+           Nincs extra padding, így a tartalom nem ugrik el, és nincs üres terület alatta. */
         .main-content.allow-scroll {
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            padding-bottom: calc(140px + var(--safe-bottom));
         }
 
         .content-wrapper {
             max-width: 1200px;
             width: 90%;
+            /* margin: auto középre igazít, de ha a tartalom magasabb a képernyőnél, nem vágja le a tetejét */
+            margin: auto;
             padding: 40px;
             text-align: center;
         }
@@ -172,12 +201,12 @@
         .content-badge {
             display: inline-block;
             padding: 8px 20px;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.2);
+            background: var(--badge-bg);
+            border: 1px solid var(--badge-border);
             border-radius: 50px;
             font-size: 13px;
             font-weight: 500;
-            color: var(--color-accent);
+            color: var(--badge-text);
             letter-spacing: 1px;
             text-transform: uppercase;
             margin-bottom: 30px;
@@ -197,7 +226,7 @@
             font-weight: 700;
             line-height: 1.1;
             margin-bottom: 24px;
-            background: linear-gradient(135deg, var(--color-text) 0%, #4b5563 100%);
+            background: linear-gradient(135deg, var(--headline-from) 0%, var(--headline-to) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -248,6 +277,7 @@
 
         .btn {
             padding: 16px 36px;
+            font-family: inherit;
             font-size: 15px;
             font-weight: 500;
             border-radius: 50px;
@@ -259,15 +289,20 @@
             gap: 8px;
         }
 
+        .btn:focus-visible {
+            outline: 2px solid var(--color-accent-light);
+            outline-offset: 3px;
+        }
+
         .btn-primary {
-            background: var(--color-accent);
+            background: #6366f1;
             color: white;
             border: none;
             box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
         }
 
         .btn-primary:hover {
-            background: var(--color-accent-light);
+            background: #818cf8;
             transform: translateY(-2px);
             box-shadow: 0 6px 30px rgba(99, 102, 241, 0.4);
         }
@@ -275,7 +310,7 @@
         .btn-secondary {
             background: transparent;
             color: var(--color-text);
-            border: 2px solid rgba(0, 0, 0, 0.1);
+            border: 2px solid var(--btn-secondary-border);
         }
 
         .btn-secondary:hover {
@@ -300,24 +335,25 @@
         }
 
         .feature-card {
-            background: rgba(255, 255, 255, 0.7);
+            background: var(--card-bg);
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             padding: 32px;
             border-radius: 20px;
-            border: 1px solid rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--card-border);
             text-align: left;
             transition: all 0.3s ease;
         }
 
         .feature-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--card-shadow);
         }
 
         .feature-icon {
             width: 48px;
             height: 48px;
-            background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
+            background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -343,11 +379,13 @@
             position: fixed;
             top: 0;
             left: 0;
+            width: 100%;
             height: 3px;
             background: linear-gradient(90deg, var(--color-accent), var(--color-accent-light));
             z-index: 100;
-            width: 0%;
-            transition: width 0.1s ease-out;
+            transform: scaleX(0);
+            transform-origin: left center;
+            transition: transform 0.1s ease-out;
         }
 
         .loading-screen {
@@ -390,8 +428,47 @@
             letter-spacing: 2px;
         }
 
+        /* WebGL nélküli tartalék nézet: csak a tartalom látszik, animáció nélkül */
+        .no-webgl .loading-screen,
+        .no-webgl .progress-bar,
+        .no-webgl #webgl-canvas,
+        .no-webgl .scroll-container,
+        .no-webgl .hero-section {
+            display: none;
+        }
+
+        .no-webgl .main-content {
+            position: relative;
+            height: auto;
+            min-height: 100vh;
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            overflow: visible;
+        }
+
+        /* Alacsonyabb asztali képernyőkön (pl. 1280×800) is férjen ki a tartalom belső görgetés nélkül */
+        @media (min-width: 769px) and (max-height: 900px) {
+            .content-wrapper {
+                padding: 24px 40px;
+            }
+            .content-badge {
+                margin-bottom: 20px;
+            }
+            .main-headline {
+                font-size: clamp(32px, min(6vw, 8.5vh), 76px);
+                margin-bottom: 20px;
+            }
+            .main-subtitle {
+                margin-bottom: 28px;
+            }
+            .features-grid {
+                margin-top: 40px;
+            }
+        }
+
         @media (max-width: 768px) {
-            body {
+            :root:not(.theme-dark) body {
                 background: linear-gradient(180deg, var(--color-bg) 0%, #f5f7ff 60%, #ffffff 100%);
             }
             .scroll-container {
@@ -459,746 +536,794 @@
                 bottom: calc(20px + var(--safe-bottom));
             }
             .main-content {
-                align-items: flex-start;
-                padding-top: 60px;
+                padding-top: calc(36px + var(--safe-top));
+            }
+            .content-wrapper {
+                margin-top: 0;
             }
             .features-grid {
                 margin-top: 36px;
             }
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            .loading-spinner {
+                animation-duration: 3s;
+            }
+            .scroll-indicator::before {
+                animation: none;
+            }
+            .main-content,
+            .main-content * {
+                transition-duration: 0.2s !important;
+                transition-delay: 0s !important;
+            }
+            .content-badge,
+            .main-headline,
+            .main-subtitle,
+            .cta-group,
+            .features-grid,
+            .feature-card:hover,
+            .btn-primary:hover {
+                transform: none !important;
+            }
+        }
     </style>
+
+    <noscript>
+        <style>
+            .loading-screen, .progress-bar, #webgl-canvas, .scroll-container, .hero-section { display: none !important; }
+            .main-content { position: relative !important; height: auto !important; min-height: 100vh; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; overflow: visible !important; }
+            .main-content * { opacity: 1 !important; transform: none !important; }
+        </style>
+    </noscript>
 </head>
 <body>
     <div class="loading-screen" id="loading">
         <div class="loading-spinner"></div>
-        <div class="loading-text">LOADING EXPERIENCE</div>
+        <div class="loading-text">BETÖLTÉS</div>
     </div>
 
     <div class="progress-bar" id="progress"></div>
-    <canvas id="webgl-canvas"></canvas>
-    <canvas id="foreground-canvas"></canvas>
+    <canvas id="webgl-canvas" aria-hidden="true"></canvas>
     <div class="scroll-container" id="scroll-container"></div>
 
     <div class="hero-section">
         <div class="hero-hint" id="hero-hint">
-            <span>Scroll to explore</span>
+            <span>Görgess a felfedezéshez</span>
             <div class="scroll-indicator"></div>
         </div>
     </div>
 
-    <div class="main-content" id="main-content">
+    <main class="main-content" id="main-content">
         <div class="content-wrapper">
-            <div class="content-badge">✨ Welcome to the Future</div>
-            <h1 class="main-headline">Experience Design<br>Beyond Boundaries</h1>
+            <div class="content-badge">✨ Üdvözöl a jövő</div>
+            <h1 class="main-headline">Élménytervezés<br>határok nélkül</h1>
             <p class="main-subtitle">
-                We craft digital experiences that transcend the ordinary. 
-                Immersive, beautiful, and built for tomorrow's web.
+                Olyan digitális élményeket alkotunk, amelyek túlmutatnak a megszokotton.
+                Magával ragadóak, gyönyörűek, és a holnap webjére készülnek.
             </p>
             <div class="cta-group">
-                <a href="#" class="btn btn-primary">
-                    Get Started
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <button type="button" class="btn btn-primary">
+                    Kezdjük el
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M5 12h14M12 5l7 7-7 7"/>
                     </svg>
-                </a>
-                <a href="#" class="btn btn-secondary">Learn More</a>
+                </button>
+                <button type="button" class="btn btn-secondary">Tudj meg többet</button>
             </div>
             <div class="features-grid">
                 <div class="feature-card">
-                    <div class="feature-icon">🚀</div>
-                    <h3 class="feature-title">Lightning Fast</h3>
-                    <p class="feature-desc">Optimized performance that delivers instant results without compromising quality.</p>
+                    <div class="feature-icon" aria-hidden="true">🚀</div>
+                    <h3 class="feature-title">Villámgyors</h3>
+                    <p class="feature-desc">Optimalizált teljesítmény, amely azonnali eredményt ad – a minőség feláldozása nélkül.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🎨</div>
-                    <h3 class="feature-title">Beautiful Design</h3>
-                    <p class="feature-desc">Stunning visuals crafted with attention to every pixel and interaction.</p>
+                    <div class="feature-icon" aria-hidden="true">🎨</div>
+                    <h3 class="feature-title">Lenyűgöző dizájn</h3>
+                    <p class="feature-desc">Látványos vizuális világ, amelyben minden pixelre és interakcióra odafigyelünk.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <h3 class="feature-title">Secure & Reliable</h3>
-                    <p class="feature-desc">Enterprise-grade security that you can trust with your most important data.</p>
+                    <div class="feature-icon" aria-hidden="true">🔒</div>
+                    <h3 class="feature-title">Biztonságos és megbízható</h3>
+                    <p class="feature-desc">Vállalati szintű biztonság, amelyre a legfontosabb adataidat is nyugodtan rábízhatod.</p>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
 
     <script>
-        const canvas = document.getElementById('webgl-canvas');
-        const foregroundCanvas = document.getElementById('foreground-canvas');
+        const root = document.documentElement;
         const loadingScreen = document.getElementById('loading');
-        const progressBar = document.getElementById('progress');
-        const heroHint = document.getElementById('hero-hint');
         const mainContent = document.getElementById('main-content');
-        const scrollContainer = document.getElementById('scroll-container');
 
-        const isMobile = window.innerWidth <= 768;
-        const baseCameraZ = isMobile ? 6.4 : 5;
-        const scrollDepth = isMobile ? 11 : 15;
-
-        // ============================================
-        // MAIN SCENE
-        // ============================================
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xfafafa);
-
-        const cameraFov = isMobile ? 80 : 75;
-        const camera = new THREE.PerspectiveCamera(cameraFov, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 5;
-
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
-
-        // ============================================
-        // FOREGROUND SCENE
-        // ============================================
-        const fgScene = new THREE.Scene();
-        const fgCamera = new THREE.PerspectiveCamera(cameraFov, window.innerWidth / window.innerHeight, 0.1, 1000);
-        fgCamera.position.z = 5;
-
-        const fgRenderer = new THREE.WebGLRenderer({ canvas: foregroundCanvas, antialias: true, alpha: true });
-        fgRenderer.setSize(window.innerWidth, window.innerHeight);
-        fgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
-        fgRenderer.setClearColor(0x000000, 0);
-
-        // ============================================
-        // MOUSE
-        // ============================================
-        const mouse = new THREE.Vector2();
-        const raycaster = new THREE.Raycaster();
-        const rayOrigin = new THREE.Vector3();
-        const rayDirection = new THREE.Vector3();
-        
-        let mouseSpeed = 0;
-        let prevMouseX = 0;
-        let prevMouseY = 0;
-        let isMouseActive = false;
-
-        function onMouseMove(event) {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            
-            const dx = event.clientX - prevMouseX;
-            const dy = event.clientY - prevMouseY;
-            mouseSpeed = Math.sqrt(dx * dx + dy * dy);
-            
-            prevMouseX = event.clientX;
-            prevMouseY = event.clientY;
-            isMouseActive = true;
-            
-            raycaster.setFromCamera(mouse, camera);
-            rayOrigin.copy(raycaster.ray.origin);
-            rayDirection.copy(raycaster.ray.direction);
+        function supportsWebGL() {
+            try {
+                const testCanvas = document.createElement('canvas');
+                return !!(window.WebGLRenderingContext &&
+                    (testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl')));
+            } catch (e) {
+                return false;
+            }
         }
 
-        window.addEventListener('mousemove', onMouseMove);
-        canvas.addEventListener('mouseleave', () => { isMouseActive = false; mouseSpeed = 0; });
-        window.addEventListener('touchmove', (e) => {
-            if (e.touches.length > 0) {
-                onMouseMove({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
-            }
-        });
-        window.addEventListener('touchend', () => { isMouseActive = false; mouseSpeed = 0; });
+        if (typeof THREE === 'undefined' || !supportsWebGL()) {
+            // Tartalék: ha a Three.js nem töltődött be, vagy nincs WebGL, a tartalom akkor is olvasható
+            root.classList.add('no-webgl', 'theme-dark');
+            mainContent.classList.add('visible');
+            loadingScreen.classList.add('hidden');
+        } else {
+            initExperience();
+        }
 
-        // ============================================
-        // PARTICLES CONFIG
-        // ============================================
-        const sphereParticleCount = isMobile ? 2400 : 5000;
-        const backgroundParticleCount = isMobile ? 4500 : 8000;
-        const foregroundParticleCount = isMobile ? 15 : 25;
-        const particleCount = sphereParticleCount + backgroundParticleCount;
-        const sphereRadius = isMobile ? 1.6 : 2;
+        function initExperience() {
+            const canvas = document.getElementById('webgl-canvas');
+            const progressBar = document.getElementById('progress');
+            const heroHint = document.getElementById('hero-hint');
 
-        // ============================================
-        // MAIN PARTICLES
-        // ============================================
-        const geometry = new THREE.BufferGeometry();
-        const positions = new Float32Array(particleCount * 3);
-        const originalPositions = new Float32Array(particleCount * 3);
-        const startPositions = new Float32Array(particleCount * 3);
-        const spreadPositions = new Float32Array(particleCount * 3);
-        const velocities = new Float32Array(particleCount * 3);
-        const colors = new Float32Array(particleCount * 3);
-        const sizes = new Float32Array(particleCount);
-        const baseSizes = new Float32Array(particleCount);
-        const depthLayers = new Float32Array(particleCount);
-        const floatSpeeds = new Float32Array(particleCount);
+            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        const phi = Math.PI * (3 - Math.sqrt(5));
+            // A részecskék száma és a gömb mérete csak betöltéskor dől el,
+            // a kamera és a renderer beállításai átméretezéskor is frissülnek.
+            let isMobile = window.innerWidth <= 768;
+            let baseCameraZ = isMobile ? 6.4 : 5;
+            let scrollDepth = isMobile ? 11 : 15;
 
-        for (let i = 0; i < particleCount; i++) {
-            const isSphereParticle = i < sphereParticleCount;
-            
-            if (isSphereParticle) {
-                // ============================================
-                // GÖMB PONTOK - EREDETI PARAMÉTEREK
-                // ============================================
-                const y = 1 - (i / (sphereParticleCount - 1)) * 2;
-                const radius = Math.sqrt(1 - y * y);
-                const theta = phi * i;
-                originalPositions[i * 3] = Math.cos(theta) * radius * sphereRadius;
-                originalPositions[i * 3 + 1] = y * sphereRadius;
-                originalPositions[i * 3 + 2] = Math.sin(theta) * radius * sphereRadius;
-                depthLayers[i] = 0.5;
-                floatSpeeds[i] = 0.5;
-                
-                // EREDETI spread pozíciók
-                spreadPositions[i * 3] = (Math.random() - 0.5) * 60;
-                spreadPositions[i * 3 + 1] = (Math.random() - 0.5) * 40;
-                spreadPositions[i * 3 + 2] = (Math.random() - 0.5) * 120 - 60;
-                
-                // EREDETI méretek
-                baseSizes[i] = Math.random() * 0.5 + 0.3;
-                
-                // EREDETI színek
-                const colorVariation = Math.random();
-                colors[i * 3] = 0.1 + colorVariation * 0.2;
-                colors[i * 3 + 1] = 0.3 + colorVariation * 0.3;
-                colors[i * 3 + 2] = 0.7 + colorVariation * 0.3;
-            } else {
-                // ============================================
-                // HÁTTÉR PONTOK - ÚJ TÉRHATÁSÚ PARAMÉTEREK
-                // ============================================
-                originalPositions[i * 3] = 0;
-                originalPositions[i * 3 + 1] = 0;
-                originalPositions[i * 3 + 2] = 0;
-                
-                // Mélység réteg
-                depthLayers[i] = Math.random();
-                const depth = depthLayers[i];
-                
-                // Közeli pontok - közelebb a kamerához
-                const layerZ = -25 + depth * 35; // -25 to +10
-                spreadPositions[i * 3] = (Math.random() - 0.5) * (40 + depth * 20);
-                spreadPositions[i * 3 + 1] = (Math.random() - 0.5) * (30 + depth * 15);
-                spreadPositions[i * 3 + 2] = layerZ;
-                
-                // Parallax sebesség
-                floatSpeeds[i] = 0.3 + (1 - depth) * 0.7;
-                
-                // Nagyobb méretek közeli pontoknak
-                const depthSize = 0.3 + depth * 1.5;
-                baseSizes[i] = depthSize * (0.5 + Math.random() * 0.5);
-                
-                // Mélység alapú színek
-                const colorVariation = Math.random();
-                const depthFade = 0.7 + depth * 0.3;
-                colors[i * 3] = (0.1 + colorVariation * 0.2) * depthFade;
-                colors[i * 3 + 1] = (0.3 + colorVariation * 0.3) * depthFade;
-                colors[i * 3 + 2] = (0.7 + colorVariation * 0.3) * depthFade;
+            // ============================================
+            // SCROLL PHASES (0..1)
+            // ============================================
+            const phases = {
+                sphereInteractEnd: 0.15,
+                morphStart: 0.25,
+                morphEnd: 0.9,
+                // A téma a szétszóródás elején vált sötétre (a morph ezen hányadánál)
+                darkMorphEnd: 0.45,
+                // A tartalom a görgetés legvégén jelenik meg, így utána már nincs mit tovább görgetni
+                contentVisible: 0.93,
+                backgroundInteractStart: 0.9,
+                innerScroll: 0.985
+            };
+
+            // ============================================
+            // MAIN SCENE
+            // ============================================
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xfafafa);
+
+            const camera = new THREE.PerspectiveCamera(isMobile ? 80 : 75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = baseCameraZ;
+
+            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+
+            // ============================================
+            // MOUSE
+            // ============================================
+            const mouse = new THREE.Vector2();
+            const raycaster = new THREE.Raycaster();
+            const localRay = new THREE.Ray();
+            const inverseParticleMatrix = new THREE.Matrix4();
+
+            let mouseSpeed = 0;
+            let prevMouseX = 0;
+            let prevMouseY = 0;
+            let hasPrevPointer = false;
+            let isMouseActive = false;
+
+            function onPointerMove(clientX, clientY) {
+                mouse.x = (clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+
+                // Az első eseménynél nincs előző pozíció, különben a (0,0)-tól mért ugrás "robbanást" okozna
+                if (hasPrevPointer) {
+                    const dx = clientX - prevMouseX;
+                    const dy = clientY - prevMouseY;
+                    // Egy képkockán belüli több esemény közül a legnagyobbat tartjuk meg, a csillapítás az animate-ben van
+                    mouseSpeed = Math.max(mouseSpeed, Math.sqrt(dx * dx + dy * dy));
+                }
+
+                prevMouseX = clientX;
+                prevMouseY = clientY;
+                hasPrevPointer = true;
+                isMouseActive = true;
             }
 
-            // Kezdő pozíciók - mindkettőnél ugyanaz
-            const startRadius = 15 + Math.random() * 25;
-            const startTheta = Math.random() * Math.PI * 2;
-            const startPhi = Math.acos(2 * Math.random() - 1);
-            
-            startPositions[i * 3] = startRadius * Math.sin(startPhi) * Math.cos(startTheta);
-            startPositions[i * 3 + 1] = startRadius * Math.sin(startPhi) * Math.sin(startTheta);
-            startPositions[i * 3 + 2] = startRadius * Math.cos(startPhi);
-
-            positions[i * 3] = startPositions[i * 3];
-            positions[i * 3 + 1] = startPositions[i * 3 + 1];
-            positions[i * 3 + 2] = startPositions[i * 3 + 2];
-
-            velocities[i * 3] = 0;
-            velocities[i * 3 + 1] = 0;
-            velocities[i * 3 + 2] = 0;
-            
-            sizes[i] = isSphereParticle ? baseSizes[i] : 0;
-        }
-
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-        // Shader uniform a morph progress-hez
-        const material = new THREE.ShaderMaterial({
-            uniforms: {
-                uMorphProgress: { value: 0.0 }
-            },
-            vertexShader: `
-                uniform float uMorphProgress;
-                attribute float size;
-                varying vec3 vColor;
-                varying float vSize;
-                varying float vDepth;
-                void main() {
-                    vColor = color;
-                    vSize = size;
-                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                    vDepth = -mvPosition.z;
-                    
-                    // Gömb fázisban 50-es, háttér fázisban 80-as szorzó
-                    float sizeMult = mix(50.0, 80.0, uMorphProgress);
-                    gl_PointSize = size * (sizeMult / -mvPosition.z);
-                    gl_Position = projectionMatrix * mvPosition;
-                }
-            `,
-            fragmentShader: `
-                uniform float uMorphProgress;
-                varying vec3 vColor;
-                varying float vSize;
-                varying float vDepth;
-                void main() {
-                    if (vSize <= 0.0) discard;
-                    float dist = length(gl_PointCoord - vec2(0.5));
-                    if (dist > 0.5) discard;
-                    
-                    // Gömb fázisban egyszerű, háttér fázisban mélység alapú alpha
-                    float baseSoftness = 0.2;
-                    float depthSoftness = clamp(vDepth * 0.1, 0.2, 0.5);
-                    float softness = mix(baseSoftness, depthSoftness, uMorphProgress);
-                    float alpha = 1.0 - smoothstep(0.5 - softness, 0.5, dist);
-                    
-                    // Mélység alapú halványítás csak háttér fázisban
-                    float depthAlpha = mix(1.0, clamp(vDepth * 0.15, 0.3, 1.0), uMorphProgress);
-                    
-                    gl_FragColor = vec4(vColor, alpha * depthAlpha);
-                }
-            `,
-            transparent: true,
-            vertexColors: true,
-            depthWrite: false,
-            blending: THREE.NormalBlending
-        });
-
-        const particles = new THREE.Points(geometry, material);
-        scene.add(particles);
-
-        // ============================================
-        // FOREGROUND PARTICLES
-        // ============================================
-        const fgGeometry = new THREE.BufferGeometry();
-        const fgPositions = new Float32Array(foregroundParticleCount * 3);
-        const fgColors = new Float32Array(foregroundParticleCount * 3);
-        const fgSizes = new Float32Array(foregroundParticleCount);
-        const fgVelocities = new Float32Array(foregroundParticleCount * 3);
-        const fgBaseSizes = new Float32Array(foregroundParticleCount);
-
-        for (let i = 0; i < foregroundParticleCount; i++) {
-            const side = Math.random();
-            if (side < 0.25) {
-                fgPositions[i * 3] = -15 - Math.random() * 10;
-            } else if (side < 0.5) {
-                fgPositions[i * 3] = 15 + Math.random() * 10;
-            } else {
-                fgPositions[i * 3] = (Math.random() - 0.5) * 30;
+            function onPointerLeave() {
+                isMouseActive = false;
+                hasPrevPointer = false;
+                mouseSpeed = 0;
             }
-            fgPositions[i * 3 + 1] = (Math.random() - 0.5) * 20;
-            fgPositions[i * 3 + 2] = 8 + Math.random() * 5;
 
-            fgVelocities[i * 3] = (Math.random() - 0.5) * 0.02;
-            fgVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.015;
-            fgVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.01;
-
-            const colorVar = Math.random();
-            fgColors[i * 3] = 0.3 + colorVar * 0.2;
-            fgColors[i * 3 + 1] = 0.4 + colorVar * 0.2;
-            fgColors[i * 3 + 2] = 0.7 + colorVar * 0.2;
-
-            fgBaseSizes[i] = 2 + Math.random() * 4;
-            fgSizes[i] = 0;
-        }
-
-        fgGeometry.setAttribute('position', new THREE.BufferAttribute(fgPositions, 3));
-        fgGeometry.setAttribute('color', new THREE.BufferAttribute(fgColors, 3));
-        fgGeometry.setAttribute('size', new THREE.BufferAttribute(fgSizes, 1));
-
-        const fgMaterial = new THREE.ShaderMaterial({
-            vertexShader: `
-                attribute float size;
-                varying vec3 vColor;
-                varying float vSize;
-                void main() {
-                    vColor = color;
-                    vSize = size;
-                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                    gl_PointSize = size * (100.0 / -mvPosition.z);
-                    gl_Position = projectionMatrix * mvPosition;
+            window.addEventListener('mousemove', (e) => onPointerMove(e.clientX, e.clientY));
+            root.addEventListener('mouseleave', onPointerLeave);
+            window.addEventListener('touchstart', (e) => {
+                if (e.touches.length > 0) {
+                    prevMouseX = e.touches[0].clientX;
+                    prevMouseY = e.touches[0].clientY;
+                    hasPrevPointer = true;
                 }
-            `,
-            fragmentShader: `
-                varying vec3 vColor;
-                varying float vSize;
-                void main() {
-                    if (vSize <= 0.0) discard;
-                    float dist = length(gl_PointCoord - vec2(0.5));
-                    if (dist > 0.5) discard;
-                    float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
-                    alpha *= 0.15;
-                    gl_FragColor = vec4(vColor, alpha);
+            }, { passive: true });
+            window.addEventListener('touchmove', (e) => {
+                if (e.touches.length > 0) {
+                    onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
                 }
-            `,
-            transparent: true,
-            vertexColors: true,
-            depthWrite: false,
-            blending: THREE.NormalBlending
-        });
+            }, { passive: true });
+            window.addEventListener('touchend', onPointerLeave);
+            window.addEventListener('touchcancel', onPointerLeave);
 
-        const fgParticles = new THREE.Points(fgGeometry, fgMaterial);
-        fgScene.add(fgParticles);
+            // ============================================
+            // PARTICLES CONFIG
+            // ============================================
+            const sphereParticleCount = isMobile ? 2400 : 5000;
+            const backgroundParticleCount = isMobile ? 4500 : 8000;
+            const particleCount = sphereParticleCount + backgroundParticleCount;
+            const sphereRadius = isMobile ? 1.6 : 2;
 
-        // ============================================
-        // DUST
-        // ============================================
-        const dustCount = isMobile ? 900 : 1500;
-        const dustGeometry = new THREE.BufferGeometry();
-        const dustPositions = new Float32Array(dustCount * 3);
-        const dustColors = new Float32Array(dustCount * 3);
+            // ============================================
+            // MAIN PARTICLES
+            // ============================================
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const originalPositions = new Float32Array(particleCount * 3);
+            const startPositions = new Float32Array(particleCount * 3);
+            const spreadPositions = new Float32Array(particleCount * 3);
+            const velocities = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const sizes = new Float32Array(particleCount);
+            const baseSizes = new Float32Array(particleCount);
+            const depthLayers = new Float32Array(particleCount);
+            const floatSpeeds = new Float32Array(particleCount);
 
-        for (let i = 0; i < dustCount; i++) {
-            dustPositions[i * 3] = (Math.random() - 0.5) * 100;
-            dustPositions[i * 3 + 1] = (Math.random() - 0.5) * 100;
-            dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 100;
-            dustColors[i * 3] = 0.5;
-            dustColors[i * 3 + 1] = 0.6;
-            dustColors[i * 3 + 2] = 0.9;
-        }
+            const phi = Math.PI * (3 - Math.sqrt(5));
 
-        dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
-        dustGeometry.setAttribute('color', new THREE.BufferAttribute(dustColors, 3));
+            for (let i = 0; i < particleCount; i++) {
+                const isSphereParticle = i < sphereParticleCount;
 
-        const dustMaterial = new THREE.PointsMaterial({
-            size: 0.03,
-            vertexColors: true,
-            transparent: true,
-            opacity: 0.4
-        });
+                if (isSphereParticle) {
+                    // ============================================
+                    // GÖMB PONTOK - EREDETI PARAMÉTEREK
+                    // ============================================
+                    const y = 1 - (i / (sphereParticleCount - 1)) * 2;
+                    const radius = Math.sqrt(1 - y * y);
+                    const theta = phi * i;
+                    originalPositions[i * 3] = Math.cos(theta) * radius * sphereRadius;
+                    originalPositions[i * 3 + 1] = y * sphereRadius;
+                    originalPositions[i * 3 + 2] = Math.sin(theta) * radius * sphereRadius;
+                    depthLayers[i] = 0.5;
+                    floatSpeeds[i] = 0.5;
 
-        const dustParticles = new THREE.Points(dustGeometry, dustMaterial);
-        scene.add(dustParticles);
+                    // EREDETI spread pozíciók
+                    spreadPositions[i * 3] = (Math.random() - 0.5) * 60;
+                    spreadPositions[i * 3 + 1] = (Math.random() - 0.5) * 40;
+                    spreadPositions[i * 3 + 2] = (Math.random() - 0.5) * 120 - 60;
 
-        // ============================================
-        // PHYSICS
-        // ============================================
-        const physics = {
-            repulsionRadius: 0.8,
-            repulsionStrength: 0.25,
-            velocityMultiplier: 0.008,
-            explosionThreshold: 80,
-            explosionMultiplier: 0.04,
-            returnSpeed: 0.025,
-            friction: 0.92,
-            maxVelocity: 4.0
-        };
+                    // EREDETI méretek
+                    baseSizes[i] = Math.random() * 0.5 + 0.3;
 
-        // ============================================
-        // STATE
-        // ============================================
-        let introProgress = 0;
-        let introStarted = false;
-        let introComplete = false;
-        const introDuration = 2.5;
-        let introStartTime = 0;
-
-        let scrollProgress = 0;
-        let targetScrollProgress = 0;
-        let isInsideSphere = false;
-        let time = 0;
-
-        // ============================================
-        // HELPERS
-        // ============================================
-        const tempVec = new THREE.Vector3();
-        const closestPoint = new THREE.Vector3();
-        
-        function pointToRayDistance(point, origin, direction) {
-            tempVec.subVectors(point, origin);
-            const t = tempVec.dot(direction);
-            if (t < 0) return 1000;
-            closestPoint.copy(direction).multiplyScalar(t).add(origin);
-            return point.distanceTo(closestPoint);
-        }
-
-        function easeOutExpo(t) {
-            return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
-        }
-
-        function easeInOutCubic(t) {
-            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-        }
-
-        // ============================================
-        // SCROLL
-        // ============================================
-        gsap.registerPlugin(ScrollTrigger);
-
-        ScrollTrigger.create({
-            trigger: '#scroll-container',
-            start: 'top top',
-            end: 'bottom bottom',
-            scrub: 0.5,
-            onUpdate: (self) => {
-                targetScrollProgress = self.progress;
-                progressBar.style.width = (self.progress * 100) + '%';
-                
-                if (introComplete) {
-                    if (self.progress > 0.02) {
-                        heroHint.classList.remove('visible');
-                        heroHint.classList.add('hidden');
-                    } else {
-                        heroHint.classList.remove('hidden');
-                        heroHint.classList.add('visible');
-                    }
-                }
-                
-                if (self.progress > 0.5) {
-                    if (!isInsideSphere) {
-                        isInsideSphere = true;
-                        mainContent.classList.add('visible');
-                    }
+                    // EREDETI színek
+                    const colorVariation = Math.random();
+                    colors[i * 3] = 0.1 + colorVariation * 0.2;
+                    colors[i * 3 + 1] = 0.3 + colorVariation * 0.3;
+                    colors[i * 3 + 2] = 0.7 + colorVariation * 0.3;
                 } else {
-                    if (isInsideSphere) {
-                        isInsideSphere = false;
-                        mainContent.classList.remove('visible');
-                    }
+                    // ============================================
+                    // HÁTTÉR PONTOK - ÚJ TÉRHATÁSÚ PARAMÉTEREK
+                    // ============================================
+                    originalPositions[i * 3] = 0;
+                    originalPositions[i * 3 + 1] = 0;
+                    originalPositions[i * 3 + 2] = 0;
+
+                    // Mélység réteg
+                    depthLayers[i] = Math.random();
+                    const depth = depthLayers[i];
+
+                    // Közeli pontok - közelebb a kamerához
+                    const layerZ = -25 + depth * 35; // -25 to +10
+                    spreadPositions[i * 3] = (Math.random() - 0.5) * (40 + depth * 20);
+                    spreadPositions[i * 3 + 1] = (Math.random() - 0.5) * (30 + depth * 15);
+                    spreadPositions[i * 3 + 2] = layerZ;
+
+                    // Parallax sebesség
+                    floatSpeeds[i] = 0.3 + (1 - depth) * 0.7;
+
+                    // Nagyobb méretek közeli pontoknak
+                    const depthSize = 0.3 + depth * 1.5;
+                    baseSizes[i] = depthSize * (0.5 + Math.random() * 0.5);
+
+                    // Mélység alapú színek
+                    const colorVariation = Math.random();
+                    const depthFade = 0.7 + depth * 0.3;
+                    colors[i * 3] = (0.1 + colorVariation * 0.2) * depthFade;
+                    colors[i * 3 + 1] = (0.3 + colorVariation * 0.3) * depthFade;
+                    colors[i * 3 + 2] = (0.7 + colorVariation * 0.3) * depthFade;
                 }
 
-                if (self.progress > 0.95) {
+                // Kezdő pozíciók - mindkettőnél ugyanaz
+                const startRadius = 15 + Math.random() * 25;
+                const startTheta = Math.random() * Math.PI * 2;
+                const startPhi = Math.acos(2 * Math.random() - 1);
+
+                startPositions[i * 3] = startRadius * Math.sin(startPhi) * Math.cos(startTheta);
+                startPositions[i * 3 + 1] = startRadius * Math.sin(startPhi) * Math.sin(startTheta);
+                startPositions[i * 3 + 2] = startRadius * Math.cos(startPhi);
+
+                positions[i * 3] = startPositions[i * 3];
+                positions[i * 3 + 1] = startPositions[i * 3 + 1];
+                positions[i * 3 + 2] = startPositions[i * 3 + 2];
+
+                velocities[i * 3] = 0;
+                velocities[i * 3 + 1] = 0;
+                velocities[i * 3 + 2] = 0;
+
+                sizes[i] = isSphereParticle ? baseSizes[i] : 0;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            // Shader uniformok: morph progress és a sötét téma átmenete
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    uMorphProgress: { value: 0.0 },
+                    uDark: { value: 0.0 }
+                },
+                vertexShader: `
+                    uniform float uMorphProgress;
+                    uniform float uDark;
+                    attribute float size;
+                    varying vec3 vColor;
+                    varying float vSize;
+                    varying float vDepth;
+                    void main() {
+                        vColor = color;
+                        vSize = size;
+                        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                        vDepth = -mvPosition.z;
+
+                        // Gömb fázisban 50-es, háttér fázisban 80-as szorzó.
+                        // Sötét témában a pont nagyobb, hogy legyen helye a halvány derengésnek.
+                        float sizeMult = mix(50.0, 80.0, uMorphProgress) * mix(1.0, 1.5, uDark);
+                        // Felső korlát, hogy a kamerához közeli pontok ne legyenek óriási foltok
+                        gl_PointSize = min(size * (sizeMult / -mvPosition.z), 64.0);
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `,
+                fragmentShader: `
+                    uniform float uMorphProgress;
+                    uniform float uDark;
+                    varying vec3 vColor;
+                    varying float vSize;
+                    varying float vDepth;
+                    void main() {
+                        if (vSize <= 0.0) discard;
+                        float dist = length(gl_PointCoord - vec2(0.5));
+                        if (dist > 0.5) discard;
+
+                        // Gömb fázisban egyszerű, háttér fázisban mélység alapú alpha
+                        float baseSoftness = 0.2;
+                        float depthSoftness = clamp(vDepth * 0.1, 0.2, 0.5);
+                        float softness = mix(baseSoftness, depthSoftness, uMorphProgress);
+                        float lightAlpha = 1.0 - smoothstep(0.5 - softness, 0.5, dist);
+
+                        // Sötét téma: kis fényes mag + halvány derengés körülötte
+                        float core = 1.0 - smoothstep(0.1, 0.24, dist);
+                        float halo = 1.0 - smoothstep(0.0, 0.5, dist);
+                        float glowAlpha = min(core * 0.85 + halo * halo * 0.4, 1.0);
+                        float alpha = mix(lightAlpha, glowAlpha, uDark);
+
+                        // Élénkebb, világosabb kék sötét háttéren, a mag közepe kicsit fehéresebb
+                        vec3 glowColor = vec3(0.22 + vColor.r * 0.8, 0.42 + vColor.g * 0.6, 1.0);
+                        glowColor = mix(glowColor, vec3(0.82, 0.9, 1.0), core * 0.2);
+                        vec3 finalColor = mix(vColor, glowColor, uDark);
+
+                        // Mélység alapú halványítás csak háttér fázisban
+                        float depthAlpha = mix(1.0, clamp(vDepth * 0.15, 0.3, 1.0), uMorphProgress);
+                        // A kamerához nagyon közeli pontok eltűnnek, hogy ne takarják a szöveget
+                        float nearFade = mix(1.0, smoothstep(0.6, 2.5, vDepth), uMorphProgress);
+                        // Sötét témában visszafogottabb, hogy ne vonja el a figyelmet a tartalomról
+                        float intensity = mix(1.0, 0.7, uDark);
+
+                        gl_FragColor = vec4(finalColor, alpha * depthAlpha * nearFade * intensity);
+                    }
+                `,
+                transparent: true,
+                vertexColors: true,
+                depthWrite: false,
+                blending: THREE.NormalBlending
+            });
+
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            // ============================================
+            // DUST
+            // ============================================
+            const dustCount = isMobile ? 900 : 1500;
+            const dustGeometry = new THREE.BufferGeometry();
+            const dustPositions = new Float32Array(dustCount * 3);
+            const dustColors = new Float32Array(dustCount * 3);
+
+            for (let i = 0; i < dustCount; i++) {
+                dustPositions[i * 3] = (Math.random() - 0.5) * 100;
+                dustPositions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+                dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+                dustColors[i * 3] = 0.5;
+                dustColors[i * 3 + 1] = 0.6;
+                dustColors[i * 3 + 2] = 0.9;
+            }
+
+            dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+            dustGeometry.setAttribute('color', new THREE.BufferAttribute(dustColors, 3));
+
+            const dustMaterial = new THREE.PointsMaterial({
+                size: 0.03,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.4
+            });
+
+            const dustParticles = new THREE.Points(dustGeometry, dustMaterial);
+            scene.add(dustParticles);
+
+            // ============================================
+            // PHYSICS
+            // ============================================
+            const physics = {
+                repulsionRadius: 0.8,
+                repulsionStrength: 0.25,
+                velocityMultiplier: 0.008,
+                explosionThreshold: 80,
+                explosionMultiplier: 0.04,
+                returnSpeed: 0.025,
+                friction: 0.92,
+                maxVelocity: 4.0,
+                // Az egér sebessége képkockánként ennyivel csökken, ha nem mozog
+                mouseSpeedDecay: 0.8
+            };
+            const repulsionRadiusSq = physics.repulsionRadius * physics.repulsionRadius;
+
+            // ============================================
+            // STATE
+            // ============================================
+            let introProgress = reducedMotion ? 1 : 0;
+            let introStarted = false;
+            let introComplete = false;
+            const introDuration = 2.5;
+            let introStartTime = 0;
+
+            let scrollProgress = 0;
+            let targetScrollProgress = 0;
+            let isContentVisible = false;
+            let isDarkTheme = false;
+            let time = 0;
+
+            const motionScale = reducedMotion ? 0 : 1;
+            const lightBg = { r: 0.98, g: 0.98, b: 0.99 };
+            const darkBg = { r: 0x07 / 255, g: 0x0a / 255, b: 0x14 / 255 };
+
+            // ============================================
+            // HELPERS
+            // ============================================
+            function clamp01(t) {
+                return Math.min(1, Math.max(0, t));
+            }
+
+            function easeOutExpo(t) {
+                return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+            }
+
+            function easeInOutCubic(t) {
+                return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            }
+
+            // ============================================
+            // SCROLL
+            // ============================================
+            let maxScroll = 1;
+
+            function measureScroll() {
+                maxScroll = Math.max(1, root.scrollHeight - window.innerHeight);
+            }
+
+            function updateHeroHint() {
+                if (!introComplete) return;
+                const showHint = targetScrollProgress <= 0.02;
+                heroHint.classList.toggle('visible', showHint);
+                heroHint.classList.toggle('hidden', !showHint);
+            }
+
+            function onScroll() {
+                const progress = clamp01(window.scrollY / maxScroll);
+                targetScrollProgress = progress;
+                progressBar.style.transform = `scaleX(${progress})`;
+
+                updateHeroHint();
+
+                const shouldShowContent = progress > phases.contentVisible;
+                if (shouldShowContent !== isContentVisible) {
+                    isContentVisible = shouldShowContent;
+                    mainContent.classList.toggle('visible', shouldShowContent);
+                }
+
+                // Belső görgetés csak a legvégén, és csak ha a tartalom tényleg nem fér ki
+                const allowInnerScroll = progress > phases.innerScroll &&
+                    mainContent.scrollHeight > mainContent.clientHeight + 1;
+                if (allowInnerScroll) {
                     mainContent.classList.add('allow-scroll');
-                } else {
+                } else if (mainContent.classList.contains('allow-scroll')) {
                     mainContent.classList.remove('allow-scroll');
                     mainContent.scrollTop = 0;
                 }
             }
-        });
 
-        // ============================================
-        // ANIMATE
-        // ============================================
-        const particleWorldPos = new THREE.Vector3();
+            window.addEventListener('scroll', onScroll, { passive: true });
 
-        function animate(currentTime) {
-            requestAnimationFrame(animate);
-            time += 0.01;
+            // ============================================
+            // ANIMATE
+            // ============================================
+            function animate(currentTime) {
+                requestAnimationFrame(animate);
+                time += 0.01;
 
-            if (introStarted && !introComplete) {
-                const elapsed = (currentTime - introStartTime) / 1000;
-                introProgress = Math.min(elapsed / introDuration, 1);
-                if (introProgress >= 1) {
-                    introComplete = true;
-                    heroHint.classList.add('visible');
-                }
-            }
-
-            const easedIntro = easeOutExpo(introProgress);
-            scrollProgress += (targetScrollProgress - scrollProgress) * 0.1;
-
-            const cameraZ = baseCameraZ - scrollProgress * scrollDepth;
-            camera.position.z = cameraZ;
-            camera.position.x = Math.sin(time * 0.5) * 0.1;
-            camera.position.y = Math.cos(time * 0.3) * 0.1;
-            
-            fgCamera.position.copy(camera.position);
-
-            const positionAttribute = geometry.getAttribute('position');
-            const sizeAttribute = geometry.getAttribute('size');
-            
-            const morphProgress = Math.max(0, (scrollProgress - 0.3) / 0.4);
-            const easedMorph = easeInOutCubic(Math.min(1, morphProgress));
-
-            // Update shader uniform
-            material.uniforms.uMorphProgress.value = easedMorph;
-
-            particles.updateMatrixWorld();
-
-            const inSpherePhase = scrollProgress < 0.15;
-            const inBackgroundPhase = scrollProgress > 0.55;
-            const canInteract = introComplete && (inSpherePhase || inBackgroundPhase);
-
-            for (let i = 0; i < particleCount; i++) {
-                const i3 = i * 3;
-                const isSphereParticle = i < sphereParticleCount;
-
-                let px = positions[i3];
-                let py = positions[i3 + 1];
-                let pz = positions[i3 + 2];
-
-                const sphereX = originalPositions[i3];
-                const sphereY = originalPositions[i3 + 1];
-                const sphereZ = originalPositions[i3 + 2];
-
-                const startX = startPositions[i3];
-                const startY = startPositions[i3 + 1];
-                const startZ = startPositions[i3 + 2];
-
-                const spreadX = spreadPositions[i3];
-                const spreadY = spreadPositions[i3 + 1];
-                const spreadZ = spreadPositions[i3 + 2];
-
-                let targetX, targetY, targetZ;
-
-                if (isSphereParticle) {
-                    const introX = startX + (sphereX - startX) * easedIntro;
-                    const introY = startY + (sphereY - startY) * easedIntro;
-                    const introZ = startZ + (sphereZ - startZ) * easedIntro;
-
-                    targetX = introX + (spreadX - sphereX) * easedMorph * easedIntro;
-                    targetY = introY + (spreadY - sphereY) * easedMorph * easedIntro;
-                    targetZ = introZ + (spreadZ - sphereZ) * easedMorph * easedIntro;
-
-                    sizeAttribute.array[i] = baseSizes[i];
-                } else {
-                    targetX = startX + (spreadX - startX) * easedMorph;
-                    targetY = startY + (spreadY - startY) * easedMorph;
-                    targetZ = startZ + (spreadZ - startZ) * easedMorph;
-
-                    sizeAttribute.array[i] = baseSizes[i] * easedMorph;
-                }
-
-                // Mouse repulsion
-                if (isMouseActive && canInteract && sizeAttribute.array[i] > 0.1) {
-                    particleWorldPos.set(px, py, pz);
-                    particles.localToWorld(particleWorldPos);
-                    
-                    const distance = pointToRayDistance(particleWorldPos, rayOrigin, rayDirection);
-
-                    if (distance < physics.repulsionRadius) {
-                        const nx = particleWorldPos.x - closestPoint.x;
-                        const ny = particleWorldPos.y - closestPoint.y;
-                        const nz = particleWorldPos.z - closestPoint.z;
-                        
-                        const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
-                        if (len > 0.001) {
-                            const dirX = nx / len;
-                            const dirY = ny / len;
-                            const dirZ = nz / len;
-
-                            const distanceFactor = Math.pow(1 - (distance / physics.repulsionRadius), 2);
-
-                            let force = physics.repulsionStrength * distanceFactor;
-                            force += mouseSpeed * physics.velocityMultiplier * distanceFactor;
-
-                            if (mouseSpeed > physics.explosionThreshold) {
-                                force += (mouseSpeed - physics.explosionThreshold) * physics.explosionMultiplier * distanceFactor;
-                            }
-
-                            velocities[i3] += dirX * force;
-                            velocities[i3 + 1] += dirY * force;
-                            velocities[i3 + 2] += dirZ * force;
-                        }
+                if (introStarted && !introComplete) {
+                    const elapsed = (currentTime - introStartTime) / 1000;
+                    introProgress = reducedMotion ? 1 : Math.min(elapsed / introDuration, 1);
+                    if (introProgress >= 1) {
+                        introComplete = true;
+                        updateHeroHint();
                     }
                 }
 
-                const vMag = Math.sqrt(velocities[i3] ** 2 + velocities[i3 + 1] ** 2 + velocities[i3 + 2] ** 2);
-                if (vMag > physics.maxVelocity) {
-                    const scale = physics.maxVelocity / vMag;
-                    velocities[i3] *= scale;
-                    velocities[i3 + 1] *= scale;
-                    velocities[i3 + 2] *= scale;
+                const easedIntro = easeOutExpo(introProgress);
+                scrollProgress += (targetScrollProgress - scrollProgress) * 0.1;
+                mouseSpeed *= physics.mouseSpeedDecay;
+
+                camera.position.z = baseCameraZ - scrollProgress * scrollDepth;
+                camera.position.x = Math.sin(time * 0.5) * 0.1 * motionScale;
+                camera.position.y = Math.cos(time * 0.3) * 0.1 * motionScale;
+                camera.updateMatrixWorld();
+
+                const positionAttribute = geometry.getAttribute('position');
+                const sizeAttribute = geometry.getAttribute('size');
+
+                const morphProgress = clamp01((scrollProgress - phases.morphStart) / (phases.morphEnd - phases.morphStart));
+                const easedMorph = easeInOutCubic(morphProgress);
+                const darkProgress = easeInOutCubic(clamp01(morphProgress / phases.darkMorphEnd));
+
+                // Update shader uniforms
+                material.uniforms.uMorphProgress.value = easedMorph;
+                material.uniforms.uDark.value = darkProgress;
+
+                // A forgatást a fizika előtt állítjuk be, hogy a taszítás az aktuális állapottal számoljon
+                const rotationSpeed = reducedMotion ? 0.3 : 1;
+                particles.rotation.y = (time * (introComplete ? 0.05 : 0.02) * rotationSpeed) + scrollProgress * 0.5;
+                particles.rotation.x = Math.sin(time * 0.2) * 0.1 * easedIntro * motionScale;
+                particles.updateMatrixWorld();
+
+                const inSpherePhase = scrollProgress < phases.sphereInteractEnd;
+                const inBackgroundPhase = scrollProgress > phases.backgroundInteractStart;
+                const canInteract = introComplete && isMouseActive && (inSpherePhase || inBackgroundPhase);
+
+                // Az egér sugarát minden képkockán újraszámoljuk (a kamera görgetéskor is mozog),
+                // és a részecskék lokális terébe transzformáljuk, így a taszítás iránya a forgatással is helyes.
+                let rayOx = 0, rayOy = 0, rayOz = 0, rayDx = 0, rayDy = 0, rayDz = 0;
+                if (canInteract) {
+                    raycaster.setFromCamera(mouse, camera);
+                    inverseParticleMatrix.copy(particles.matrixWorld).invert();
+                    localRay.copy(raycaster.ray).applyMatrix4(inverseParticleMatrix);
+                    rayOx = localRay.origin.x;
+                    rayOy = localRay.origin.y;
+                    rayOz = localRay.origin.z;
+                    rayDx = localRay.direction.x;
+                    rayDy = localRay.direction.y;
+                    rayDz = localRay.direction.z;
                 }
 
-                px += velocities[i3];
-                py += velocities[i3 + 1];
-                pz += velocities[i3 + 2];
+                const floatAmount = introComplete ? 0.015 * motionScale : 0;
 
-                velocities[i3] *= physics.friction;
-                velocities[i3 + 1] *= physics.friction;
-                velocities[i3 + 2] *= physics.friction;
+                for (let i = 0; i < particleCount; i++) {
+                    const i3 = i * 3;
+                    const isSphereParticle = i < sphereParticleCount;
 
-                px += (targetX - px) * physics.returnSpeed;
-                py += (targetY - py) * physics.returnSpeed;
-                pz += (targetZ - pz) * physics.returnSpeed;
+                    let px = positions[i3];
+                    let py = positions[i3 + 1];
+                    let pz = positions[i3 + 2];
 
-                // Float animation
-                const floatSpeed = floatSpeeds[i];
-                const floatAmount = introComplete ? 0.015 : 0;
-                const floatX = Math.sin(time * floatSpeed + i * 0.1) * floatAmount * (isSphereParticle ? 0.7 : 1.3);
-                const floatY = Math.cos(time * floatSpeed * 0.7 + i * 0.15) * floatAmount * (isSphereParticle ? 0.7 : 1.3);
+                    const sphereX = originalPositions[i3];
+                    const sphereY = originalPositions[i3 + 1];
+                    const sphereZ = originalPositions[i3 + 2];
 
-                positionAttribute.array[i3] = px + floatX;
-                positionAttribute.array[i3 + 1] = py + floatY;
-                positionAttribute.array[i3 + 2] = pz;
-                
-                positions[i3] = px;
-                positions[i3 + 1] = py;
-                positions[i3 + 2] = pz;
+                    const startX = startPositions[i3];
+                    const startY = startPositions[i3 + 1];
+                    const startZ = startPositions[i3 + 2];
+
+                    const spreadX = spreadPositions[i3];
+                    const spreadY = spreadPositions[i3 + 1];
+                    const spreadZ = spreadPositions[i3 + 2];
+
+                    let targetX, targetY, targetZ;
+
+                    if (isSphereParticle) {
+                        const introX = startX + (sphereX - startX) * easedIntro;
+                        const introY = startY + (sphereY - startY) * easedIntro;
+                        const introZ = startZ + (sphereZ - startZ) * easedIntro;
+
+                        targetX = introX + (spreadX - sphereX) * easedMorph * easedIntro;
+                        targetY = introY + (spreadY - sphereY) * easedMorph * easedIntro;
+                        targetZ = introZ + (spreadZ - sphereZ) * easedMorph * easedIntro;
+
+                        sizeAttribute.array[i] = baseSizes[i];
+                    } else {
+                        targetX = startX + (spreadX - startX) * easedMorph;
+                        targetY = startY + (spreadY - startY) * easedMorph;
+                        targetZ = startZ + (spreadZ - startZ) * easedMorph;
+
+                        sizeAttribute.array[i] = baseSizes[i] * easedMorph;
+                    }
+
+                    // Mouse repulsion (lokális térben)
+                    if (canInteract && sizeAttribute.array[i] > 0.1) {
+                        const relX = px - rayOx;
+                        const relY = py - rayOy;
+                        const relZ = pz - rayOz;
+                        const t = relX * rayDx + relY * rayDy + relZ * rayDz;
+
+                        if (t > 0) {
+                            const nx = relX - rayDx * t;
+                            const ny = relY - rayDy * t;
+                            const nz = relZ - rayDz * t;
+                            const distSq = nx * nx + ny * ny + nz * nz;
+
+                            if (distSq < repulsionRadiusSq) {
+                                const distance = Math.sqrt(distSq);
+                                if (distance > 0.001) {
+                                    const distanceFactor = Math.pow(1 - (distance / physics.repulsionRadius), 2);
+
+                                    let force = physics.repulsionStrength * distanceFactor;
+                                    force += mouseSpeed * physics.velocityMultiplier * distanceFactor;
+
+                                    if (mouseSpeed > physics.explosionThreshold) {
+                                        force += (mouseSpeed - physics.explosionThreshold) * physics.explosionMultiplier * distanceFactor;
+                                    }
+
+                                    velocities[i3] += (nx / distance) * force;
+                                    velocities[i3 + 1] += (ny / distance) * force;
+                                    velocities[i3 + 2] += (nz / distance) * force;
+                                }
+                            }
+                        }
+                    }
+
+                    const vMag = Math.sqrt(velocities[i3] ** 2 + velocities[i3 + 1] ** 2 + velocities[i3 + 2] ** 2);
+                    if (vMag > physics.maxVelocity) {
+                        const scale = physics.maxVelocity / vMag;
+                        velocities[i3] *= scale;
+                        velocities[i3 + 1] *= scale;
+                        velocities[i3 + 2] *= scale;
+                    }
+
+                    px += velocities[i3];
+                    py += velocities[i3 + 1];
+                    pz += velocities[i3 + 2];
+
+                    velocities[i3] *= physics.friction;
+                    velocities[i3 + 1] *= physics.friction;
+                    velocities[i3 + 2] *= physics.friction;
+
+                    px += (targetX - px) * physics.returnSpeed;
+                    py += (targetY - py) * physics.returnSpeed;
+                    pz += (targetZ - pz) * physics.returnSpeed;
+
+                    // Float animation
+                    const floatSpeed = floatSpeeds[i];
+                    const floatX = Math.sin(time * floatSpeed + i * 0.1) * floatAmount * (isSphereParticle ? 0.7 : 1.3);
+                    const floatY = Math.cos(time * floatSpeed * 0.7 + i * 0.15) * floatAmount * (isSphereParticle ? 0.7 : 1.3);
+
+                    positionAttribute.array[i3] = px + floatX;
+                    positionAttribute.array[i3 + 1] = py + floatY;
+                    positionAttribute.array[i3 + 2] = pz;
+
+                    positions[i3] = px;
+                    positions[i3 + 1] = py;
+                    positions[i3 + 2] = pz;
+                }
+
+                positionAttribute.needsUpdate = true;
+                sizeAttribute.needsUpdate = true;
+
+                dustParticles.rotation.y = time * 0.02 * rotationSpeed;
+                dustParticles.rotation.x = time * 0.01 * rotationSpeed;
+                dustMaterial.opacity = 0.4 - darkProgress * 0.15;
+
+                // Háttérszín: világosból folyamatosan sötétbe a szétszóródás elején (új objektum létrehozása nélkül)
+                const lightShift = scrollProgress * 0.02;
+                scene.background.setRGB(
+                    (lightBg.r - lightShift) + (darkBg.r - (lightBg.r - lightShift)) * darkProgress,
+                    (lightBg.g - lightShift) + (darkBg.g - (lightBg.g - lightShift)) * darkProgress,
+                    (lightBg.b - lightShift) + (darkBg.b - (lightBg.b - lightShift)) * darkProgress
+                );
+
+                const shouldBeDark = darkProgress > 0.5;
+                if (shouldBeDark !== isDarkTheme) {
+                    isDarkTheme = shouldBeDark;
+                    root.classList.toggle('theme-dark', shouldBeDark);
+                }
+
+                renderer.render(scene, camera);
             }
 
-            positionAttribute.needsUpdate = true;
-            sizeAttribute.needsUpdate = true;
+            // ============================================
+            // RESIZE & START
+            // ============================================
+            function onResize() {
+                isMobile = window.innerWidth <= 768;
+                baseCameraZ = isMobile ? 6.4 : 5;
+                scrollDepth = isMobile ? 11 : 15;
 
-            // Foreground particles
-            const fgPosAttr = fgGeometry.getAttribute('position');
-            const fgSizeAttr = fgGeometry.getAttribute('size');
-            
-            for (let i = 0; i < foregroundParticleCount; i++) {
-                const i3 = i * 3;
-                
-                fgPositions[i3] += fgVelocities[i3];
-                fgPositions[i3 + 1] += fgVelocities[i3 + 1];
-                fgPositions[i3 + 2] += fgVelocities[i3 + 2];
-                
-                if (fgPositions[i3] > 20) fgPositions[i3] = -20;
-                if (fgPositions[i3] < -20) fgPositions[i3] = 20;
-                if (fgPositions[i3 + 1] > 15) fgPositions[i3 + 1] = -15;
-                if (fgPositions[i3 + 1] < -15) fgPositions[i3 + 1] = 15;
-                
-                fgPosAttr.array[i3] = fgPositions[i3];
-                fgPosAttr.array[i3 + 1] = fgPositions[i3 + 1];
-                fgPosAttr.array[i3 + 2] = fgPositions[i3 + 2];
-                
-                fgSizeAttr.array[i] = fgBaseSizes[i] * easedMorph;
+                camera.fov = isMobile ? 80 : 75;
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+                renderer.setSize(window.innerWidth, window.innerHeight);
+
+                measureScroll();
+                onScroll();
             }
-            
-            fgPosAttr.needsUpdate = true;
-            fgSizeAttr.needsUpdate = true;
 
-            particles.rotation.y = time * (introComplete ? 0.05 : 0.02) + scrollProgress * 0.5;
-            particles.rotation.x = Math.sin(time * 0.2) * 0.1 * easedIntro;
+            window.addEventListener('resize', onResize);
+            measureScroll();
+            onScroll();
+            scrollProgress = targetScrollProgress;
 
-            dustParticles.rotation.y = time * 0.02;
-            dustParticles.rotation.x = time * 0.01;
+            // A betöltőképernyő a betűtípus betöltéséig (legfeljebb 2,5 mp-ig), de legalább 0,6 mp-ig látszik
+            const minLoaderTime = new Promise((resolve) => setTimeout(resolve, 600));
+            const fontsReady = document.fonts
+                ? Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 2500))])
+                : Promise.resolve();
 
-            const bgIntensity = 0.98 - scrollProgress * 0.02;
-            scene.background = new THREE.Color(bgIntensity, bgIntensity, bgIntensity + 0.01);
-
-            renderer.render(scene, camera);
-            fgRenderer.render(fgScene, fgCamera);
-        }
-
-        // ============================================
-        // RESIZE & START
-        // ============================================
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            
-            fgCamera.aspect = window.innerWidth / window.innerHeight;
-            fgCamera.updateProjectionMatrix();
-            fgRenderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        if (isMobile) {
-            scrollContainer.style.height = '420vh';
-        }
-
-        setTimeout(() => {
-            loadingScreen.classList.add('hidden');
-            requestAnimationFrame((timestamp) => {
-                introStarted = true;
-                introStartTime = timestamp;
-                animate(timestamp);
+            Promise.all([minLoaderTime, fontsReady]).then(() => {
+                measureScroll();
+                onScroll();
+                loadingScreen.classList.add('hidden');
+                requestAnimationFrame((timestamp) => {
+                    introStarted = true;
+                    introStartTime = timestamp;
+                    animate(timestamp);
+                });
             });
-        }, 1000);
 
-        document.addEventListener('keydown', (e) => {
-            const scrollAmount = window.innerHeight * 0.1;
-            if (e.key === 'ArrowDown' || e.key === ' ') {
+            document.addEventListener('keydown', (e) => {
+                if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+                // Szóköz egy fókuszált gombon a gombot aktiválja, nem görget
+                if (e.key === ' ' && e.target.closest && e.target.closest('button, input, textarea, select, [contenteditable]')) return;
+
+                let direction = 0;
+                if (e.key === 'ArrowDown' || (e.key === ' ' && !e.shiftKey)) direction = 1;
+                else if (e.key === 'ArrowUp' || (e.key === ' ' && e.shiftKey)) direction = -1;
+                if (!direction) return;
+
                 e.preventDefault();
-                window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                window.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
-            }
-        });
+                const scrollAmount = window.innerHeight * 0.1 * direction;
+                const behavior = reducedMotion ? 'auto' : 'smooth';
+
+                // Ha a tartalom belül görgethető, először azt mozgatjuk
+                if (mainContent.classList.contains('allow-scroll')) {
+                    const canScrollDown = mainContent.scrollTop + mainContent.clientHeight < mainContent.scrollHeight - 1;
+                    const canScrollUp = mainContent.scrollTop > 0;
+                    if ((direction > 0 && canScrollDown) || (direction < 0 && canScrollUp)) {
+                        mainContent.scrollBy({ top: scrollAmount, behavior });
+                        return;
+                    }
+                }
+
+                window.scrollBy({ top: scrollAmount, behavior });
+            });
+        }
     </script>
 </body>
 </html>
